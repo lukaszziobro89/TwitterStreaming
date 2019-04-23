@@ -27,14 +27,18 @@ object SparkTwitter extends App{
     val auth = new OAuthAuthorization(cb.build)
     val tweets = TwitterUtils.createStream(ssc, Some(auth))
 
+  println(tweets
+    .map((_, 1))
+  )
+
+    println(tweets.flatMap(x => x.getText).count())
+
     val s = tweets.foreachRDD(x => x
         .filter(tweet => tweet.getUser.getId.equals(1944672564))
         .map(tweet => tweet.getText)
         .collect()
         .foreach(a => println(a))
     )
-
-    println(s.toString)
 
 //    val luq89_all = tweets
 //        .flatMap(status => status.getText)

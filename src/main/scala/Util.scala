@@ -1,14 +1,15 @@
 import twitter4j._
+import twitter4j.conf.Configuration
 
 object Util {
-  val config = new twitter4j.conf.ConfigurationBuilder()
+  val config: Configuration = new twitter4j.conf.ConfigurationBuilder()
     .setOAuthConsumerKey("LpCeOO2iYm89WQJopqoBOQK4w")
     .setOAuthConsumerSecret("mP7rP4zzHvDSbfHNAWV5r3rItQV7QZxwPwj49hrMYami0BOv4Y")
     .setOAuthAccessToken("1944672564-iT5elViH2PmGPEdizwnwIBe9QTNsSyYfcaAlt9U")
     .setOAuthAccessTokenSecret("qazBV8bH6B0diTzxUnbg5P7vMpgDlE3xoM7Q2tjxZupqo")
     .build
 
-  def simpleStatusListener = new StatusListener() {
+    def simpleStatusListener: StatusListener = new StatusListener() {
     def onStatus(status: Status) { println(status.getText) }
     def onDeletionNotice(statusDeletionNotice: StatusDeletionNotice) {}
     def onTrackLimitationNotice(numberOfLimitedStatuses: Int) {}
@@ -17,7 +18,5 @@ object Util {
     def onStallWarning(warning: StallWarning) {}
   }
 }
-
-
 
 

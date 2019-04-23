@@ -1,4 +1,4 @@
-name := "dependencyTest"
+name := "TwitterStreaming"
 
 version := "0.1"
 
