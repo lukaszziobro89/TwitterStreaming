@@ -1,3 +1,4 @@
+import notifications.{SlackUtils, Telegram}
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.SparkConf
 import org.apache.spark.streaming.twitter._
@@ -21,15 +22,16 @@ object TwitterTopTags extends App{
   System.setProperty("twitter4j.oauth.consumerSecret", consumerSecret)
   System.setProperty("twitter4j.oauth.accessToken", accessToken)
   System.setProperty("twitter4j.oauth.accessTokenSecret", accessTokenSecret)
+  System.setProperty("tweet_mode", "extended")
 
   val sparkConf = new SparkConf().setAppName("TwitterPopularTags")
 
   // check Spark configuration for master URL, set it to local if not configured
   if (!sparkConf.contains("spark.master")) {
-    sparkConf.setMaster("local[2]")
+    sparkConf.setMaster("local[2]").set("spark.testing.memory", "2147480000")
   }
 
-  val ssc = new StreamingContext(sparkConf, Seconds(5))
+  val ssc = new StreamingContext(sparkConf, Seconds(10))
   val stream = TwitterUtils.createStream(ssc, None)
 
 //  val hashTags = stream
@@ -38,16 +40,21 @@ object TwitterTopTags extends App{
 //      .filter(_.startsWith("#"))
 
     val hashTags = stream
-//      .filter(_.getLang == "pl")
+      .filter(_.getLang == "en")
+      .filter(_.getText.toLowerCase().contains("trump"))
 //      .filter(_.getUser.getScreenName.contains(""))
       .map { status =>
         val text = status.getText
+
+//          if(text.toLowerCase().contains("pis")){
+//            Telegram.sendNotification(text.toString)
+//          }
+
         val user = status.getUser.getName
         val screenName = status.getUser.getScreenName
         val date = status.getCreatedAt.toString
         (text, user, screenName, date)
     }
-
 
 
 //  val hashTags = stream
@@ -64,37 +71,35 @@ object TwitterTopTags extends App{
 
     hashTags.foreachRDD(rdd => {
       val topList = rdd
-      println("\nPopular topics in last 10 seconds (%s total):".format(rdd.count()))
+//      println("\nPopular topics in last 10 seconds (%s total):".format(rdd.count()))
       topList.foreach{println}
     })
 
-  /**
-  val topCounts60 = hashTags
-    .map((_, 1))
-    .reduceByKeyAndWindow(_ + _, Seconds(60))
-    .map{case (topic, count) => (count, topic)}
-    .transform(_.sortByKey(ascending = false))
+  val trumpWordCounter = hashTags
+    .filter(data => data._1.toLowerCase.contains("trump"))
+    .map(data => (data._1, 1))
+    .reduceByKeyAndWindow((x,y) => x + y, Seconds(10))
+    .map{
+      case (trumpWord, count) => (count, trumpWord)
+    }
 
-  val topCounts10 = hashTags
-    .map((_, 1))
-    .reduceByKeyAndWindow(_ + _, Seconds(10))
-    .map{case (topic, count) => (count, topic)}
-    .transform(_.sortByKey(ascending = false))
+    trumpWordCounter.foreachRDD(rdd => {
+      println("------------------------------------------------------------------")
+      print("Number of tweets with 'Trump' in tweet in last 10s: ")
+        rdd.map{
+          tweet => ("Trump", 1)
+        }.reduceByKey(_ + _)
+          .foreach{
+            count => println("%s - %s".format("Trump", count._2.toString))
 
+                  if(count._2 >= 5){
+                    Telegram.sendNotification("Trump - " + count._2)
+                    SlackUtils.sendMessageToChannel("grafana_luq89", "Trump - " + count._2)
+                  }
+        }
+      println("------------------------------------------------------------------")
+    })
 
-  // Print popular hashtags
-  topCounts60.foreachRDD(rdd => {
-    val topList = rdd.take(10)
-    println("\nPopular topics in last 60 seconds (%s total):".format(rdd.count()))
-    topList.foreach{case (count, tag) => println("%s (%s tweets)".format(tag, count))}
-  })
-
-  topCounts10.foreachRDD(rdd => {
-    val topList = rdd.take(10)
-    println("\nPopular topics in last 10 seconds (%s total):".format(rdd.count()))
-    topList.foreach{case (count, tag) => println("%s (%s tweets)".format(tag, count))}
-  })
-*/
   ssc.start()
   ssc.awaitTermination()
 

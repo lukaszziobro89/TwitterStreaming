@@ -23,7 +23,7 @@ object UserTweets extends App{
   twitterStream.addListener(Util.simpleStatusListener)
 
 //  twitterStream.filter()
-  twitterStream.firehose(1)
+  twitterStream.sample()
 
 //  println(statuses)
 
